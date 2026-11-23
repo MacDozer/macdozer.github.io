@@ -486,6 +486,34 @@
       }@${account_id.replace(/\s/g, '')}.com`;
       role = urlRole || role;
 
+      // Test metadata (added for ps-migration-tool testing): fixed for each visitor
+      // and account, derived from their names, unless the URL sets them
+      // (plan, seats, region, workspace, trial).
+      function hashOf(text) {
+        var hash = 0;
+        for (var i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
+        return Math.abs(hash);
+      }
+      var visitorHash = hashOf(visitor);
+      var accountHash = hashOf(account_id);
+      function pick(list, hash) {
+        return list[hash % list.length];
+      }
+      var visitorExtra = {
+        plan: urlParams.get('plan') || pick(['free', 'pro', 'enterprise'], visitorHash),
+        seats: Number(urlParams.get('seats')) || (visitorHash % 50) + 1,
+        region: urlParams.get('region') || pick(['EU', 'US', 'APAC'], accountHash),
+        workspace: urlParams.get('workspace') || pick(['Sales', 'Support', 'Marketing', 'Finance'], Math.floor(visitorHash / 7)),
+        is_trial: urlParams.has('trial') ? urlParams.get('trial') === 'true' : visitorHash % 4 === 0,
+        signup_date: new Date(Date.UTC(2025, 0, 1) + (visitorHash % 600) * 864e5).toISOString().slice(0, 10),
+      };
+      var accountExtra = {
+        plan: pick(['free', 'pro', 'enterprise'], accountHash),
+        arr: ((accountHash % 200) + 1) * 1000,
+        industry: pick(['Retail', 'Finance', 'Healthcare', 'Software', 'Manufacturing'], Math.floor(accountHash / 3)),
+        employees: (accountHash % 5000) + 10,
+      };
+
       // Store visitor info on global for use in avatar drop down
       window.userInfo = {
         account: account_id,
@@ -523,9 +551,19 @@
             visitor: {
               id: visitor || 'VISITOR-UNIQUE-ID',
               role: role || 'user',
+              plan: visitorExtra.plan,
+              seats: visitorExtra.seats,
+              region: visitorExtra.region,
+              workspace: visitorExtra.workspace,
+              is_trial: visitorExtra.is_trial,
+              signup_date: visitorExtra.signup_date,
             },
             account: {
               id: account_id || 'ACCOUNT-UNIQUE-ID',
+              plan: accountExtra.plan,
+              arr: accountExtra.arr,
+              industry: accountExtra.industry,
+              employees: accountExtra.employees,
             },
           });
         })('YOUR-PENDO-API-KEY-HERE');
