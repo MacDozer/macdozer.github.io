@@ -47,6 +47,18 @@
       }
     </script>
     <script>
+      // Built-in sample data: the app's restdb.io database no longer answers, so its requests read the site's own copy (/sample-data).
+      (function () {
+        var open = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (method, url) {
+          var args = [].slice.call(arguments);
+          var match = typeof url === 'string' && url.match(/^https:\/\/petest-9f02\.restdb\.io\/rest\/([A-Za-z]+)(?:\/([A-Za-z0-9_-]+))?/);
+          if (match) args[1] = '/sample-data/' + match[1].toLowerCase() + (match[2] ? '/' + match[2] : '') + '.json';
+          return open.apply(this, args);
+        };
+      })();
+    </script>
+    <script>
       // Get URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const disablePendo = urlParams.get('disablePendo') === 'true';
